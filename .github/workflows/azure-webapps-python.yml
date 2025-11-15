@@ -60,6 +60,18 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      #Set the startup command in Azure App Service
+      - name: Set startup command
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          app-settings-json: |
+            [
+              { "name": "SCM_DO_BUILD_DURING_DEPLOYMENT", "value": "true" },
+              { "name": "STARTUP_COMMAND", "value": "bash startup.sh" }
+            ]
+
+
       - name: Set Azure App Settings (environment variables)
         uses: azure/appservice-settings@v1
         with:
