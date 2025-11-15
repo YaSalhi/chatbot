@@ -28,6 +28,10 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Make startup.sh executable
+        run: chmod +x startup.sh
+
+
       - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
         with:
