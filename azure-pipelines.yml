@@ -1,0 +1,85 @@
+# azure-pipelines.yml
+# This pipeline builds and deploys a Python web app to Azure App Service.
+
+trigger:
+- main
+
+variables:
+  # Define pipeline variables
+  azureSubscription: 'connection-chatbot-dev' # IMPORTANT: Update this
+  azureWebAppName: 'app-RG-Chatbot-AzureAI1'
+  pythonVersion: '3.10'
+  vmImageName: 'ubuntu-latest'
+
+stages:
+- stage: Build
+  displayName: Build stage
+  jobs:
+  - job: Build
+    displayName: Build and Archive
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - checkout: self
+
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '$(pythonVersion)'
+      displayName: 'Set up Python $(pythonVersion)'
+
+    - script: |
+        python -m venv venv
+        source venv/bin/activate
+        pip install -r requirements.txt
+      displayName: 'Install dependencies (for local validation)'
+
+    - script: chmod +x startup.sh
+      displayName: 'Make startup.sh executable'
+
+    - task: ArchiveFiles@2
+      displayName: 'Archive source code for deployment'
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+        replaceExistingArchive: true
+        # Exclude files not needed for deployment
+        exclude: |
+          venv/**
+          __pycache__/**
+          .git/**
+
+    - publish: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+      artifact: drop
+
+- stage: Deploy
+  displayName: Deploy stage
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - deployment: DeployWebApp
+    displayName: Deploy to Web App
+    environment: 'Production'
+    pool:
+      vmImage: $(vmImageName)
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: AzureWebApp@1
+            displayName: 'Deploy Azure Web App'
+            inputs:
+              azureSubscription: '$(azureSubscription)'
+              appType: 'webAppLinux'
+              appName: '$(azureWebAppName)'
+              package: '$(Pipeline.Workspace)/drop/$(Build.BuildId).zip'
+              runtimeStack: 'PYTHON|$(pythonVersion)'
+              # These settings are equivalent to your azure/appservice-settings steps
+              appSettings: |
+                -SCM_DO_BUILD_DURING_DEPLOYMENT true
+                -STARTUP_COMMAND "bash startup.sh"
+                -AZURE_OPENAI_KEY "$(AZURE_OPENAI_KEY)"
+                -AZURE_OPENAI_ENDPOINT "$(AZURE_OPENAI_ENDPOINT)"
+                -AZURE_OPENAI_DEPLOYMENT "$(AZURE_OPENAI_DEPLOYMENT)"
+                -FLASK_ENV "production"
