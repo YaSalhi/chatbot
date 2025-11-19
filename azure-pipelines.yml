@@ -1,8 +1,20 @@
 # azure-pipelines.yml
 # This pipeline builds and deploys a Python web app to Azure App Service.
 
+# This pipeline is triggered by:
+# 1. A push to the 'main' branch of this repository.
+# 2. The completion of the infrastructure pipeline.
 trigger:
 - main
+
+resources:
+  pipelines:
+  - pipeline: infra_pipeline # An alias for the resource
+    # the actual name of the infrastructure pipeline
+    source: 'infra-chatbot-ai' 
+    trigger: true # Trigger this pipeline when the source pipeline completes
+
+pr: none # Disable pull request triggers
 
 variables:
   # Define pipeline variables
@@ -54,7 +66,7 @@ stages:
       artifact: drop
 
 - stage: Deploy
-  displayName: Deploy stage
+  displayName: 'Deploy Application to Dev'
   dependsOn: Build
   condition: succeeded()
   jobs:
