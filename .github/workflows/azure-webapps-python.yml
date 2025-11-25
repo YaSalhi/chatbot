@@ -81,7 +81,10 @@ jobs:
               { "name": "AZURE_OPENAI_KEY", "value": "${{ secrets.AZURE_OPENAI_KEY }}" },
               { "name": "AZURE_OPENAI_ENDPOINT", "value": "${{ secrets.AZURE_OPENAI_ENDPOINT }}" },
               { "name": "AZURE_OPENAI_DEPLOYMENT", "value": "${{ secrets.AZURE_OPENAI_DEPLOYMENT }}" },
-              { "name": "FLASK_ENV", "value": "production" }
+              { "name": "FLASK_ENV", "value": "production" },
+              { "name": "AZURE_SEARCH_ENDPOINT", "value": "${{ secrets.AZURE_SEARCH_ENDPOINT }}" },
+              { "name": "AZURE_SEARCH_KEY", "value": "${{ secrets.AZURE_SEARCH_KEY }}" },
+              { "name": "AZURE_SEARCH_INDEX", "value": "${{ secrets.AZURE_SEARCH_INDEX }}" }
             ]
 
       - name: Deploy to Azure Web App
