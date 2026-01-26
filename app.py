@@ -2,12 +2,14 @@ from flask import Flask, request, jsonify, render_template
 from openai import AzureOpenAI # Utilisation du client Azure spécifique
 import os
 from dotenv import load_dotenv # Recommandé pour charger le .env
-
+import base64
+import json
+import logging
 # Charge les variables d'environnement
 load_dotenv()
 
 app = Flask(__name__)
-
+logging.basicConfig(level=logging.INFO)
 # 1. Configuration du client Azure OpenAI
 client = AzureOpenAI(
     azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT"),
@@ -25,6 +27,29 @@ search_index    = os.getenv("AZURE_SEARCH_INDEX") # Nom de l'index créé étape
 @app.route("/")
 def home():
     return render_template("index.html")
+
+@app.route("/whoami")
+def whoami():
+    principal = request.headers.get("X-MS-CLIENT-PRINCIPAL")
+
+    logging.info("==== WHOAMI CALLED ====")
+
+    if not principal:
+        logging.info("NO X-MS-CLIENT-PRINCIPAL HEADER FOUND")
+        return {"error": "No client principal header"}, 401
+
+    decoded = base64.b64decode(principal).decode("utf-8")
+    user = json.loads(decoded)
+
+    logging.info(f"CLIENT PRINCIPAL RAW: {principal}")
+    logging.info(f"CLIENT PRINCIPAL DECODED: {user}")
+
+    return {
+        "oid": user.get("oid"),
+        "name": user.get("name"),
+        "preferred_username": user.get("preferred_username"),
+        "groups": user.get("groups")
+    }
 
 @app.route("/chat", methods=["POST"])
 def chat():
