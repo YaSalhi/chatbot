@@ -2,38 +2,14 @@ from flask import Flask, request, jsonify, render_template
 from openai import AzureOpenAI # Utilisation du client Azure spécifique
 import os
 from dotenv import load_dotenv # Recommandé pour charger le .env
-import base64
-import json
-import logging
+
+
 # Charge les variables d'environnement
 load_dotenv()
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 # 1. Configuration du client Azure OpenAI
-
-def extract_claims(user):
-    claims = user.get("claims", [])
-    result = {}
-
-    for c in claims:
-        claim_type = c.get("typ")
-        claim_value = c.get("val")
-
-        if claim_type in [
-            "name",
-            "preferred_username"
-        ]:
-            result[claim_type] = claim_value
-
-        if claim_type.endswith("/objectidentifier"):
-            result["oid"] = claim_value
-
-        if claim_type == "groups":
-            result["groups"] = claim_value
-
-    return result
-
 client = AzureOpenAI(
     azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT"),
     api_key        = os.getenv("AZURE_OPENAI_KEY"),
@@ -50,29 +26,6 @@ search_index    = os.getenv("AZURE_SEARCH_INDEX") # Nom de l'index créé étape
 @app.route("/")
 def home():
     return render_template("index.html")
-
-@app.route("/whoami")
-def whoami():
-    principal = request.headers.get("X-MS-CLIENT-PRINCIPAL")
-
-    logging.info("==== WHOAMI CALLED ====")
-
-    if not principal:
-        return {"error": "No client principal header"}, 401
-
-    decoded = base64.b64decode(principal).decode("utf-8")
-    user = json.loads(decoded)
-
-    extracted = extract_claims(user)
-
-    logging.info(f"EXTRACTED USER: {extracted}")
-
-    return {
-        "oid": extracted.get("oid"),
-        "name": extracted.get("name"),
-        "preferred_username": extracted.get("preferred_username"),
-        "groups": extracted.get("groups", [])
-    }
 
 
 @app.route("/chat", methods=["POST"])
