@@ -11,6 +11,29 @@ load_dotenv()
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 # 1. Configuration du client Azure OpenAI
+
+def extract_claims(user):
+    claims = user.get("claims", [])
+    result = {}
+
+    for c in claims:
+        claim_type = c.get("typ")
+        claim_value = c.get("val")
+
+        if claim_type in [
+            "name",
+            "preferred_username"
+        ]:
+            result[claim_type] = claim_value
+
+        if claim_type.endswith("/objectidentifier"):
+            result["oid"] = claim_value
+
+        if claim_type == "groups":
+            result["groups"] = claim_value
+
+    return result
+
 client = AzureOpenAI(
     azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT"),
     api_key        = os.getenv("AZURE_OPENAI_KEY"),
@@ -35,21 +58,22 @@ def whoami():
     logging.info("==== WHOAMI CALLED ====")
 
     if not principal:
-        logging.info("NO X-MS-CLIENT-PRINCIPAL HEADER FOUND")
         return {"error": "No client principal header"}, 401
 
     decoded = base64.b64decode(principal).decode("utf-8")
     user = json.loads(decoded)
 
-    logging.info(f"CLIENT PRINCIPAL RAW: {principal}")
-    logging.info(f"CLIENT PRINCIPAL DECODED: {user}")
+    extracted = extract_claims(user)
+
+    logging.info(f"EXTRACTED USER: {extracted}")
 
     return {
-        "oid": user.get("oid"),
-        "name": user.get("name"),
-        "preferred_username": user.get("preferred_username"),
-        "groups": user.get("groups")
+        "oid": extracted.get("oid"),
+        "name": extracted.get("name"),
+        "preferred_username": extracted.get("preferred_username"),
+        "groups": extracted.get("groups", [])
     }
+
 
 @app.route("/chat", methods=["POST"])
 def chat():
