@@ -8,7 +8,7 @@ from dotenv import load_dotenv # Recommandé pour charger le .env
 load_dotenv()
 
 app = Flask(__name__)
-logging.basicConfig(level=logging.INFO)
+
 # 1. Configuration du client Azure OpenAI
 client = AzureOpenAI(
     azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT"),
